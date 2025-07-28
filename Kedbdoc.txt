@@ -1,0 +1,85 @@
+import streamlit as st
+from datetime import date
+from docx import Document
+from docx.shared import Inches
+import os
+
+def main():
+    st.title("KEDB Document Generator")
+
+    kedb_no = get_next_kedb_number()
+    st.markdown(f"### KEDB Number: {kedb_no}")
+
+    # Page 1
+    short_desc = st.text_input("Short Description")
+    issue_type = st.selectbox("Issue Type", ["System", "Data", "Configuration", "Other"])
+
+    # Page 2
+    today = date.today().strftime("%Y-%m-%d")
+    creator = st.text_input("Creator Name")
+    version = st.text_input("Version Number", "1.0")
+    approver = st.text_input("Approver Name (Optional)")
+
+    # Page 3
+    detailed_desc = st.text_area("Detailed Description")
+
+    # Page 4
+    root_cause = st.text_area("Root Cause")
+    root_image = st.file_uploader("Upload Snap for Root Cause", type=["png", "jpg", "jpeg"])
+    
+    fix = st.text_area("Workaround / Fix")
+    fix_image = st.file_uploader("Upload Snap for Workaround / Fix", type=["png", "jpg", "jpeg"])
+
+    if st.button("Generate KEDB Document"):
+        generate_doc(kedb_no, short_desc, issue_type, today, creator, version, approver,
+                     detailed_desc, root_cause, root_image, fix, fix_image)
+        st.success(f"Document {kedb_no}.docx created!")
+
+def generate_doc(kedb_no, short_desc, issue_type, today, creator, version, approver,
+                 detailed_desc, root_cause, root_image, fix, fix_image):
+    doc = Document()
+    
+    doc.add_heading(f"KEDB Entry - {kedb_no}", 0)
+
+    # Page 1
+    doc.add_heading("Issue Summary", level=1)
+    doc.add_paragraph(f"KEDB Number: {kedb_no}")
+    doc.add_paragraph(f"Short Description: {short_desc}")
+    doc.add_paragraph(f"Issue Type: {issue_type}")
+    doc.add_page_break()
+
+    # Page 2
+    doc.add_heading("Document Revision History", level=1)
+    doc.add_paragraph(f"Date: {today}")
+    doc.add_paragraph(f"Creator: {creator}")
+    doc.add_paragraph(f"Version: {version}")
+    doc.add_paragraph(f"Approver: {approver}")
+    doc.add_page_break()
+
+    # Page 3
+    doc.add_heading("Detailed Description of Problem", level=1)
+    doc.add_paragraph(detailed_desc)
+    doc.add_page_break()
+
+    # Page 4
+    doc.add_heading("Root Cause", level=1)
+    doc.add_paragraph(root_cause)
+    if root_image:
+        doc.add_picture(root_image, width=Inches(5))
+
+    doc.add_heading("Workaround / Fix", level=1)
+    doc.add_paragraph(fix)
+    if fix_image:
+        doc.add_picture(fix_image, width=Inches(5))
+
+    os.makedirs("output_docs", exist_ok=True)
+    doc.save(f"output_docs/{kedb_no}.docx")
+
+
+def get_next_kedb_number():
+    with open("kedb_counter.txt", "r+") as file:
+        number = int(file.read())
+        new_number = f"KEDB{number:04}"
+        file.seek(0)
+        file.write(str(number + 1))
+        return new_number
